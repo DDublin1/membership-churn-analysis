@@ -4,6 +4,10 @@
 
 A production-ready data science pipeline combining scalable PySpark processing, statistical hypothesis testing, survival analysis, machine learning classification, and multi-agent LLM systems to predict and explain membership churn at scale.
 
+
+> **Data Confidentiality Notice**
+> The dataset used in this project is subject to a Non-Disclosure Agreement (NDA) and has been removed from this repository. The `data/` directory contains schema documentation and a data card describing the dataset's structure, scale, and statistical properties without exposing confidential records. All methodology, code, model architecture, and agentic system design are fully documented and reproducible given equivalent data.
+
 ## Overview
 
 This repository contains a complete analytical workflow for membership churn analysis built on 2.1GB of membership data (18.4M records). The pipeline progresses from raw data ingestion through exploratory analysis, statistical validation, predictive modeling, and finally AI-powered insight generation via a specialized multi-agent system.
