@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Membership Churn Analysis Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="data.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; background: #FFFFFF; }
+  .nav-link { cursor: pointer; padding: 8px 16px; color: #FFFFFF; text-decoration: none; font-size: 13px; opacity: 0.8; }
+  .nav-link.active { opacity: 1; border-bottom: 2px solid #FFFFFF; }
+  .nav-link.disabled { opacity: 0.4; cursor: default; }
+  .kpi-card { background: #F2F2F2; border-radius: 8px; padding: 20px; text-align: center; }
+  .kpi-value { color: #1B3A5C; font-size: 28px; font-weight: bold; }
+  .kpi-label { color: #595959; font-size: 13px; margin-top: 4px; }
+  .kpi-sub { color: #595959; font-size: 11px; font-style: italic; margin-top: 2px; }
+  .chart-container { background: #FFFFFF; padding: 16px; margin-bottom: 24px; }
+  .chart-title { color: #1B3A5C; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+  .chart-footnote { color: #595959; font-size: 11px; font-style: italic; margin-top: 8px; }
+  .page-title { color: #1B3A5C; font-size: 22px; font-weight: bold; }
+  .page-subtitle { color: #595959; font-size: 13px; margin-top: 4px; }
+  .filter-label { color: #595959; font-size: 12px; margin-right: 8px; }
+  .filter-select { background: #F2F2F2; color: #1B3A5C; border: 1px solid #E0E0E0; border-radius: 4px; padding: 6px 12px; font-size: 13px; font-family: Arial; }
+  .toggle-btn { background: #F2F2F2; color: #1B3A5C; border: 1px solid #E0E0E0; border-radius: 4px; padding: 6px 16px; font-size: 13px; cursor: pointer; font-family: Arial; }
+  .toggle-btn.active { background: #1B3A5C; color: #FFFFFF; }
+  .stat-card { background: #F2F2F2; border-radius: 8px; padding: 16px; text-align: center; }
+  .footer-text { color: #595959; font-size: 11px; font-style: italic; padding: 24px 0; text-align: center; }
+  .method-table th { background: #1B3A5C; color: #FFFFFF; padding: 10px 16px; font-size: 13px; text-align: left; }
+  .method-table td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid #E0E0E0; }
+  .method-table tr:nth-child(even) td { background: #F2F2F2; }
+</style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav style="background: #1B3A5C; height: 56px; display: flex; align-items: center; padding: 0 24px; position: fixed; top: 0; left: 0; right: 0; z-index: 100;">
+  <span style="color: #FFFFFF; font-size: 14px; font-weight: bold; margin-right: auto;">Membership Churn Analysis</span>
+  <div style="display: flex; gap: 4px;">
+    <a class="nav-link active" onclick="showPage('churn-trends')" id="nav-churn-trends">Churn Trends</a>
+    <a class="nav-link" onclick="showPage('regional-risk')" id="nav-regional-risk">Regional Risk</a>
+    <a class="nav-link" onclick="showPage('revenue')" id="nav-revenue">Revenue at Risk</a>
+    <a class="nav-link" onclick="showPage('forecast')" id="nav-forecast">Forecast</a>
+    <a class="nav-link disabled" id="nav-drivers">Driver Analysis</a>
+    <a class="nav-link disabled" id="nav-model">Model Comparison</a>
+  </div>
+</nav>
+
+<div style="max-width: 1400px; margin: 0 auto; padding: 72px 24px 24px;">
+
+<!-- ======================= PAGE 1: CHURN TRENDS ======================= -->
+<div id="page-churn-trends" class="page">
+  <div style="margin-bottom: 16px;">
+    <div class="page-title">Churn Trends</div>
+    <div class="page-subtitle">National churn rates over time by membership category. Full observation period January 2021 to November 2025.</div>
+    <hr style="border: none; border-top: 1px solid #E0E0E0; margin-top: 12px;">
+  </div>
+
+  <!-- Filter -->
+  <div style="margin-bottom: 16px; display: flex; align-items: center;">
+    <span class="filter-label">Membership Category:</span>
+    <select class="filter-select" id="filter-category" onchange="renderPage1()">
+      <option value="All">All</option>
+      <option value="Nurse member (National)">Nurse member</option>
+      <option value="Nurse Support Worker (National)">Nurse Support Worker</option>
+      <option value="Student (National)">Student</option>
+    </select>
+  </div>
+
+  <!-- KPI Cards -->
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="kpi-card">
+      <div class="kpi-value">0.6614%</div>
+      <div class="kpi-label">Monthly Churn Rate</div>
+      <div class="kpi-sub">Weighted average &ndash; full observation period</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">0.51%</div>
+      <div class="kpi-label">Nurse Member Rate</div>
+      <div class="kpi-sub">Lowest absolute rate, highest volume</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">1.02%</div>
+      <div class="kpi-label">NSW Rate</div>
+      <div class="kpi-sub">&nbsp;</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">1.80%</div>
+      <div class="kpi-label">Student Rate</div>
+      <div class="kpi-sub">&nbsp;</div>
+    </div>
+  </div>
+
+  <!-- Line Chart -->
+  <div class="chart-container">
+    <div class="chart-title">Monthly Churn Rate by Membership Category</div>
+    <canvas id="chart-churn-line" height="100"></canvas>
+    <div class="chart-footnote">Source: monthly_churn_trends</div>
+  </div>
+
+  <!-- Pre vs Post Bar Chart -->
+  <div class="chart-container">
+    <div class="chart-title">Pre-Surge vs Post-Surge Churn Rate by Category</div>
+    <canvas id="chart-pre-post" height="80"></canvas>
+    <div class="chart-footnote">Post-surge Nurse member uplift +7% above pre-surge baseline. Source: monthly_churn_trends</div>
+  </div>
+
+  <!-- January Premium Cards -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="stat-card">
+      <div style="font-size: 28px; font-weight: bold; color: #DC267F;">2.96x</div>
+      <div class="kpi-label">Student January Premium</div>
+      <div class="kpi-sub">January vs non-January churn ratio &ndash; confirmed statistically</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size: 28px; font-weight: bold; color: #648FFF;">1.15x</div>
+      <div class="kpi-label">Nurse Member January Premium</div>
+      <div class="kpi-sub">January vs non-January churn ratio &ndash; confirmed statistically</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size: 28px; font-weight: bold; color: #FE6100;">1.05x</div>
+      <div class="kpi-label">NSW January Premium</div>
+      <div class="kpi-sub">January vs non-January churn ratio &ndash; confirmed statistically</div>
+    </div>
+  </div>
+
+  <div class="footer-text">All data is aggregate population-level. Organisation name withheld under NDA. Analysis period: January 2021 to November 2025.</div>
+</div>
+
+<!-- ======================= PAGE 2: REGIONAL RISK ======================= -->
+<div id="page-regional-risk" class="page" style="display:none;">
+  <div style="margin-bottom: 16px;">
+    <div class="page-title">Regional Risk Monitor</div>
+    <div class="page-subtitle">Post-surge churn uplift by region. Five high-uplift regions confirmed via statistical testing.</div>
+    <hr style="border: none; border-top: 1px solid #E0E0E0; margin-top: 12px;">
+  </div>
+
+  <!-- KPI Cards -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="kpi-card">
+      <div class="kpi-value">5</div>
+      <div class="kpi-label">High-Uplift Regions</div>
+      <div class="kpi-sub">Confirmed via Mann-Whitney with Bonferroni correction</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">+26.0%</div>
+      <div class="kpi-label">Highest Uplift</div>
+      <div class="kpi-sub">Northern Ireland &ndash; Nurse member</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">1.135x</div>
+      <div class="kpi-label">North-South Gradient</div>
+      <div class="kpi-sub">0.552% North vs 0.486% South</div>
+    </div>
+  </div>
+
+  <!-- Uplift Bar Chart -->
+  <div class="chart-container">
+    <div class="chart-title">Post-Surge Nurse Member Churn Uplift by Region</div>
+    <canvas id="chart-uplift" height="120"></canvas>
+    <div class="chart-footnote">All five uplifts statistically confirmed via Mann-Whitney U test with Bonferroni correction.</div>
+  </div>
+
+  <!-- Five Region Time Series -->
+  <div class="chart-container">
+    <!-- Filter attached to this chart -->
+    <div style="margin-bottom: 12px; display: flex; align-items: center;">
+      <span class="filter-label">Region:</span>
+      <select class="filter-select" id="filter-region" onchange="renderPage2()">
+        <option value="All">All high-uplift regions</option>
+        <option value="Northern Ireland">Northern Ireland</option>
+        <option value="Yorkshire &amp; The Humber">Yorkshire and The Humber</option>
+        <option value="Wales">Wales</option>
+        <option value="North West">North West</option>
+        <option value="London">London</option>
+      </select>
+    </div>
+    <div class="chart-title">Nurse Member Monthly Churn Rate &ndash; Five High-Uplift Regions vs National</div>
+    <canvas id="chart-region-ts" height="100"></canvas>
+    <div class="chart-footnote">Source: region_churn_clean</div>
+  </div>
+
+  <!-- North-South Bar Chart -->
+  <div class="chart-container" style="width: 50%; margin-left: auto; margin-right: auto;">
+    <div class="chart-title">North-South Nurse Member Churn Gradient</div>
+    <canvas id="chart-north-south" height="140"></canvas>
+    <div class="chart-footnote">North 0.552% vs South 0.486% &ndash; ratio 1.135x &ndash; statistically significant. Source: region_churn_clean</div>
+  </div>
+
+  <div class="footer-text">All data is aggregate population-level. Organisation name withheld under NDA. Analysis period: January 2021 to November 2025.</div>
+</div>
+
+<!-- ======================= PAGE 3: REVENUE AT RISK ======================= -->
+<div id="page-revenue" class="page" style="display:none;">
+  <div style="margin-bottom: 16px;">
+    <div class="page-title">Revenue at Risk</div>
+    <div class="page-subtitle">Financial impact of churn by segment. Estimated annual revenue exposure at published minimum fee rates.</div>
+    <hr style="border: none; border-top: 1px solid #E0E0E0; margin-top: 12px;">
+  </div>
+
+  <!-- KPI Cards -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="kpi-card">
+      <div class="kpi-value">from &pound;102.36</div>
+      <div class="kpi-label">Nurse Member Annual Fee</div>
+      <div class="kpi-sub">From &pound;8.53/month published minimum</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">from &pound;10.08</div>
+      <div class="kpi-label">Student Annual Fee</div>
+      <div class="kpi-sub">From &pound;0.84/month published minimum</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">1.0x to 1.5x</div>
+      <div class="kpi-label">Fee Sensitivity Range</div>
+      <div class="kpi-sub">Base to 1.5x &ndash; pay band scaling</div>
+    </div>
+  </div>
+
+  <!-- Revenue Bar Chart -->
+  <div class="chart-container">
+    <!-- Fee Sensitivity Toggle attached to this chart -->
+    <div style="margin-bottom: 12px; display: flex; align-items: center;">
+      <span class="filter-label">Fee Sensitivity:</span>
+      <button class="toggle-btn active" onclick="setFeeSensitivity(1.0)" id="fee-1">1.0x</button>
+      <button class="toggle-btn" onclick="setFeeSensitivity(1.25)" id="fee-125" style="margin-left:4px;">1.25x</button>
+      <button class="toggle-btn" onclick="setFeeSensitivity(1.5)" id="fee-15" style="margin-left:4px;">1.5x</button>
+    </div>
+    <div class="chart-title">Estimated Annual Revenue at Risk by Category</div>
+    <canvas id="chart-revenue-bar" height="90"></canvas>
+    <div class="chart-footnote">Published minimum fees March 2026. Actual fees may be higher due to pay band scaling. Student revenue at risk reported separately &ndash; an unknown proportion of Student exits are positive transitions to Nurse membership.</div>
+  </div>
+
+  <!-- Nurse Revenue Journey -->
+  <div class="chart-container">
+    <div class="chart-title">Nurse Membership Revenue Journey &mdash; Gross Potential vs Attrition-Adjusted Capture</div>
+    <canvas id="chart-journey" height="80"></canvas>
+    <div class="chart-footnote">Transition rates derived from aggregate cohort behaviour. Individual member journeys cannot be tracked.</div>
+  </div>
+
+  <!-- Top 10 Segments -->
+  <div class="chart-container">
+    <div class="chart-title">Top 10 Segments by Estimated Revenue Exposure (Base Fee Rate)</div>
+    <canvas id="chart-top10" height="120"></canvas>
+    <div class="chart-footnote">Source: risk_segmentation</div>
+  </div>
+
+  <div class="footer-text">All data is aggregate population-level. Organisation name withheld under NDA. Analysis period: January 2021 to November 2025.</div>
+</div>
+
+<!-- ======================= PAGE 4: FORECAST ======================= -->
+<div id="page-forecast" class="page" style="display:none;">
+  <div style="margin-bottom: 16px;">
+    <div class="page-title">Forecast Projections</div>
+    <div class="page-subtitle">12-month forward forecast for 8 segments. December 2025 to November 2026.</div>
+    <hr style="border: none; border-top: 1px solid #E0E0E0; margin-top: 12px;">
+  </div>
+
+  <!-- KPI Cards -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="kpi-card">
+      <div class="kpi-value">12 months</div>
+      <div class="kpi-label">Forecast Horizon</div>
+      <div class="kpi-sub">December 2025 to November 2026</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">8</div>
+      <div class="kpi-label">Segments Forecast</div>
+      <div class="kpi-sub">3 national + 5 regional Nurse member</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">Prophet</div>
+      <div class="kpi-label">Primary Method</div>
+      <div class="kpi-sub">7 of 8 segments. Northern Ireland: SARIMAX.</div>
+    </div>
+  </div>
+
+  <!-- Forecast Overview -->
+  <div class="chart-container">
+    <!-- Segment slicer attached to this chart -->
+    <div style="margin-bottom: 12px; display: flex; align-items: center;">
+      <span class="filter-label">Highlight Segment:</span>
+      <select class="filter-select" id="filter-segment" onchange="renderPage4()">
+        <option value="All">All segments</option>
+      </select>
+    </div>
+    <div class="chart-title">Monthly Churn Rate &ndash; Historical and 12-Month Forecast (Three National Categories)</div>
+    <canvas id="chart-forecast-overview" height="100"></canvas>
+    <div class="chart-footnote">Source: monthly_churn_trends + forecast_outputs</div>
+  </div>
+
+  <!-- Regional Small Multiples -->
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="chart-container">
+      <div class="chart-title">Northern Ireland</div>
+      <canvas id="chart-fc-ni" height="90"></canvas>
+      <div class="chart-footnote">Method: SARIMAX</div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-title">Yorkshire and The Humber</div>
+      <canvas id="chart-fc-yorks" height="90"></canvas>
+      <div class="chart-footnote">Method: Prophet</div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-title">Wales</div>
+      <canvas id="chart-fc-wales" height="90"></canvas>
+      <div class="chart-footnote">Method: Prophet</div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-title">North West</div>
+      <canvas id="chart-fc-nw" height="90"></canvas>
+      <div class="chart-footnote">Method: Prophet</div>
+    </div>
+    <div class="chart-container" style="grid-column: 1 / -1; max-width: 50%;">
+      <div class="chart-title">London</div>
+      <canvas id="chart-fc-london" height="90"></canvas>
+      <div class="chart-footnote">Method: Prophet</div>
+    </div>
+  </div>
+
+  <!-- Forecast Method Table -->
+  <div class="chart-container">
+    <div class="chart-title">Forecast Method Summary</div>
+    <table class="method-table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr><th>Segment</th><th>Method</th><th>Notes</th></tr>
+      </thead>
+      <tbody id="forecast-method-table"></tbody>
+    </table>
+    <div class="chart-footnote">SARIMAX selected for Northern Ireland based on lower held-out validation RMSE on 6-month hold-out set.</div>
+  </div>
+
+  <div class="footer-text">All data is aggregate population-level. Organisation name withheld under NDA. Analysis period: January 2021 to November 2025.</div>
+</div>
+
+<!-- ======================= PAGE 5: DRIVER ANALYSIS (Stretch) ======================= -->
+<div id="page-drivers" class="page" style="display:none;">
+  <div style="margin-bottom: 16px;">
+    <div class="page-title">Driver Analysis</div>
+    <div class="page-subtitle">Coming soon &ndash; SHAP importance and hazard ratios from the survival model.</div>
+    <hr style="border: none; border-top: 1px solid #E0E0E0; margin-top: 12px;">
+  </div>
+  <div style="text-align: center; padding: 80px 0; color: #595959;">
+    <div style="font-size: 48px; margin-bottom: 16px;">&#128295;</div>
+    <div style="font-size: 18px;">Coming soon</div>
+    <div style="font-size: 13px; margin-top: 8px;">This page will display SHAP feature importance and Cox PH hazard ratios.</div>
+  </div>
+</div>
+
+<!-- ======================= PAGE 6: MODEL COMPARISON (Stretch) ======================= -->
+<div id="page-model" class="page" style="display:none;">
+  <div style="margin-bottom: 16px;">
+    <div class="page-title">Model Comparison</div>
+    <div class="page-subtitle">Coming soon &ndash; model-derived vs manual risk tier comparison.</div>
+    <hr style="border: none; border-top: 1px solid #E0E0E0; margin-top: 12px;">
+  </div>
+  <div style="text-align: center; padding: 80px 0; color: #595959;">
+    <div style="font-size: 48px; margin-bottom: 16px;">&#128295;</div>
+    <div style="font-size: 18px;">Coming soon</div>
+    <div style="font-size: 13px; margin-top: 8px;">This page will display risk tier distribution and cross-tabulation analysis.</div>
+  </div>
+</div>
+
+</div><!-- end max-width container -->
+
+<script>
+// ===== CONSTANTS =====
+const COLOURS = {
+  nurse: '#648FFF',
+  nsw: '#FE6100',
+  student: '#DC267F',
+  riskHigh: '#D32F2F',
+  riskMedium: '#00838F',
+  riskLow: '#FFB000',
+  navy: '#1B3A5C',
+  grey: '#595959',
+  gridline: '#E0E0E0',
+  surgeGrey: '#999999',
+};
+
+const CATEGORY_COLOUR_MAP = {
+  'Nurse member (National)': COLOURS.nurse,
+  'Nurse Support Worker (National)': COLOURS.nsw,
+  'Student (National)': COLOURS.student,
+  'Nurse member': COLOURS.nurse,
+  'Nurse Support Worker': COLOURS.nsw,
+  'Student': COLOURS.student,
+};
+
+const RISK_COLOUR_MAP = {
+  'High': COLOURS.riskHigh,
+  'Medium': COLOURS.riskMedium,
+  'Low': COLOURS.riskLow,
+};
+
+const HIGH_UPLIFT_REGIONS = ['Northern Ireland', 'Yorkshire & The Humber', 'Wales', 'North West', 'London'];
+const CONFIRMED_UPLIFTS = {
+  'Northern Ireland': 26.0,
+  'Yorkshire & The Humber': 21.0,
+  'Wales': 18.0,
+  'North West': 13.0,
+  'London': 11.0,
+};
+
+const REGION_LINE_COLOURS = {
+  'Northern Ireland': '#648FFF',
+  'Yorkshire & The Humber': '#FE6100',
+  'Wales': '#DC267F',
+  'North West': '#999999',
+  'London': '#595959',
+};
+
+// ===== CHART DEFAULTS =====
+Chart.defaults.font.family = 'Arial';
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#595959';
+Chart.defaults.animation = false;
+
+// ===== SURGE ANNOTATION PLUGIN =====
+function surgeAnnotation() {
+  return {
+    type: 'box',
+    xMin: '2022-10-01',
+    xMax: '2023-07-01',
+    backgroundColor: 'rgba(153, 153, 153, 0.15)',
+    borderWidth: 0,
+    label: {
+      display: true,
+      content: 'Recruitment Surge',
+      position: 'start',
+      color: '#999999',
+      font: { size: 11, style: 'italic', family: 'Arial' },
+    }
+  };
+}
+
+function forecastLine() {
+  return {
+    type: 'line',
+    xMin: '2025-12-01',
+    xMax: '2025-12-01',
+    borderColor: '#595959',
+    borderWidth: 1,
+    borderDash: [5, 5],
+    label: {
+      display: true,
+      content: 'Forecast Start',
+      position: 'start',
+      color: '#1B3A5C',
+      backgroundColor: '#FFFFFF',
+      borderColor: '#CCCCCC',
+      borderWidth: 1,
+      borderRadius: 4,
+      padding: { top: 3, bottom: 3, left: 6, right: 6 },
+      font: { size: 11, style: 'italic', family: 'Arial', weight: 'normal' },
+    }
+  };
+}
+
+// ===== TOOLTIP DEFAULTS =====
+function makeTooltip(source) {
+  return {
+    backgroundColor: '#FFFFFF',
+    titleColor: '#1B3A5C',
+    bodyColor: '#595959',
+    borderColor: '#CCCCCC',
+    borderWidth: 1,
+    cornerRadius: 4,
+    padding: 10,
+    callbacks: {
+      afterBody: function() { return source ? 'Source: ' + source : ''; },
+      label: function(ctx) {
+        let val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed.x;
+        if (typeof val === 'number') val = (val * 100).toFixed(2) + '%';
+        return ctx.dataset.label + ': ' + val;
+      }
+    }
+  };
+}
+
+// ===== COMMON SCALE OPTIONS =====
+function timeXScale() {
+  return {
+    type: 'category',
+    grid: { display: false },
+    ticks: { maxTicksToShow: 12, autoSkip: true, maxRotation: 45, font: { size: 11, family: 'Arial' } },
+    border: { display: true, color: '#E0E0E0' },
+  };
+}
+
+function pctYScale(label) {
+  return {
+    grid: { color: '#E0E0E0', lineWidth: 0.5 },
+    border: { display: true, color: '#E0E0E0' },
+    ticks: {
+      callback: v => (v * 100).toFixed(1) + '%',
+      font: { size: 11, family: 'Arial' },
+    },
+    title: label ? { display: true, text: label, color: '#595959', font: { size: 11, family: 'Arial' } } : undefined,
+  };
+}
+
+// ===== NAVIGATION =====
+const pageMap = {
+  'churn-trends': 'page-churn-trends',
+  'regional-risk': 'page-regional-risk',
+  'revenue': 'page-revenue',
+  'forecast': 'page-forecast',
+  'drivers': 'page-drivers',
+  'model': 'page-model',
+};
+
+function showPage(page) {
+  if (page === 'drivers' || page === 'model') return;
+  Object.values(pageMap).forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById(pageMap[page]).style.display = 'block';
+  document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + page).classList.add('active');
+  window.location.hash = page;
+
+  if (page === 'churn-trends') renderPage1();
+  if (page === 'regional-risk') renderPage2();
+  if (page === 'revenue') renderPage3();
+  if (page === 'forecast') renderPage4();
+}
+
+// ===== CHART INSTANCES =====
+let charts = {};
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ===== PAGE 1: CHURN TRENDS =====
+function renderPage1() {
+  const filter = document.getElementById('filter-category').value;
+  const trainData = DATA.monthly_churn_trends.filter(d => d.split === 'train');
+
+  // National segments
+  const nationalSegments = ['Nurse member (National)', 'Nurse Support Worker (National)', 'Student (National)'];
+  const segments = filter === 'All' ? nationalSegments : [filter];
+
+  // Get all unique dates sorted
+  const allDates = [...new Set(trainData.filter(d => nationalSegments.includes(d.segment)).map(d => d.snapshot_date))].sort();
+
+  // Line chart
+  destroyChart('churn-line');
+  const lineDatasets = segments.map(seg => {
+    const segData = trainData.filter(d => d.segment === seg);
+    const dataMap = {};
+    segData.forEach(d => dataMap[d.snapshot_date] = d.computed_churn_rate);
+    return {
+      label: seg.replace(' (National)', ''),
+      data: allDates.map(dt => dataMap[dt] ?? null),
+      borderColor: CATEGORY_COLOUR_MAP[seg],
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      tension: 0.1,
+    };
+  });
+
+  charts['churn-line'] = new Chart(document.getElementById('chart-churn-line'), {
+    type: 'line',
+    data: { labels: allDates, datasets: lineDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      scales: { x: timeXScale(), y: pctYScale('Churn Rate') },
+      plugins: {
+        tooltip: makeTooltip('monthly_churn_trends'),
+        legend: { position: 'bottom', labels: { font: { size: 12, family: 'Arial' }, usePointStyle: true } },
+        annotation: { annotations: { surge: surgeAnnotation() } },
+      },
+    }
+  });
+
+  // Pre vs Post bar chart
+  destroyChart('pre-post');
+  const preSurge = trainData.filter(d => d.snapshot_date < '2022-10-01');
+  const postSurge = trainData.filter(d => d.snapshot_date >= '2023-07-01');
+
+  function weightedRate(data, seg) {
+    const s = data.filter(d => d.segment === seg);
+    const totalLeavers = s.reduce((a, d) => a + d.total_leavers, 0);
+    const totalMembers = s.reduce((a, d) => a + d.total_members, 0);
+    return totalMembers > 0 ? totalLeavers / totalMembers : 0;
+  }
+
+  const catLabels = filter === 'All' ? nationalSegments : [filter];
+  const preRates = catLabels.map(s => weightedRate(preSurge, s));
+  const postRates = catLabels.map(s => weightedRate(postSurge, s));
+  const barLabels = catLabels.map(s => s.replace(' (National)', ''));
+
+  charts['pre-post'] = new Chart(document.getElementById('chart-pre-post'), {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [
+        {
+          label: 'Pre-Surge',
+          data: preRates,
+          backgroundColor: catLabels.map(s => hexToRGBA(CATEGORY_COLOUR_MAP[s], 0.6)),
+          borderWidth: 0,
+        },
+        {
+          label: 'Post-Surge',
+          data: postRates,
+          backgroundColor: catLabels.map(s => CATEGORY_COLOUR_MAP[s]),
+          borderWidth: 0,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      scales: {
+        x: { grid: { display: false }, border: { display: true, color: '#E0E0E0' } },
+        y: pctYScale('Churn Rate'),
+      },
+      plugins: {
+        tooltip: makeTooltip('monthly_churn_trends'),
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { size: 12, family: 'Arial' },
+            boxWidth: 14,
+            boxHeight: 14,
+            generateLabels: function(chart) {
+              const items = [];
+              const cats = chart.data.labels;
+              cats.forEach((cat, ci) => {
+                const baseColour = CATEGORY_COLOUR_MAP[cat] || CATEGORY_COLOUR_MAP[cat + ' (National)'];
+                items.push({
+                  text: cat + ' Pre-surge',
+                  fillStyle: hexToRGBA(baseColour, 0.6),
+                  strokeStyle: hexToRGBA(baseColour, 0.6),
+                  lineWidth: 0,
+                  hidden: false,
+                });
+                items.push({
+                  text: cat + ' Post-surge',
+                  fillStyle: baseColour,
+                  strokeStyle: baseColour,
+                  lineWidth: 0,
+                  hidden: false,
+                });
+              });
+              return items;
+            },
+          },
+          onClick: function() {},
+        },
+        datalabels: false,
+      },
+    },
+    plugins: [{
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, dsi) => {
+          ds.data.forEach((val, i) => {
+            const meta = chart.getDatasetMeta(dsi);
+            const bar = meta.data[i];
+            if (bar) {
+              ctx.save();
+              ctx.fillStyle = '#1B3A5C';
+              ctx.font = 'bold 11px Arial';
+              ctx.textAlign = 'center';
+              ctx.fillText((val * 100).toFixed(2) + '%', bar.x, bar.y - 6);
+              ctx.restore();
+            }
+          });
+        });
+      }
+    }]
+  });
+}
+
+// ===== PAGE 2: REGIONAL RISK =====
+function initPage2Filters() {
+  // Slicer options are hard-coded in HTML (five high-uplift regions + All)
+}
+
+function renderPage2() {
+  const regionFilter = document.getElementById('filter-region').value;
+
+  // Uplift bar chart (static - uses confirmed hardcoded values)
+  destroyChart('uplift');
+
+  // Compute pre/post rates per region from data
+  const preData = DATA.region_churn_clean.filter(d => d.period === 'Pre-Surge');
+  const postData = DATA.region_churn_clean.filter(d => d.period === 'Post-Surge');
+
+  const regions = [...new Set(DATA.region_churn_clean.map(d => d.Region))].filter(r => r !== 'H Q (Overseas)');
+
+  function regionRate(data, region) {
+    const r = data.filter(d => d.Region === region);
+    const tl = r.reduce((a, d) => a + d.total_leavers, 0);
+    const tm = r.reduce((a, d) => a + d.total_members, 0);
+    return tm > 0 ? tl / tm : 0;
+  }
+
+  const upliftData = regions.map(r => {
+    const preRate = regionRate(preData, r);
+    const postRate = regionRate(postData, r);
+    const upliftPct = preRate > 0 ? ((postRate - preRate) / preRate) * 100 : 0;
+    // Use confirmed values for high-uplift regions
+    const confirmed = CONFIRMED_UPLIFTS[r];
+    return { region: r, uplift: confirmed !== undefined ? confirmed : upliftPct };
+  }).sort((a, b) => b.uplift - a.uplift);
+
+  charts['uplift'] = new Chart(document.getElementById('chart-uplift'), {
+    type: 'bar',
+    data: {
+      labels: upliftData.map(d => d.region),
+      datasets: [{
+        data: upliftData.map(d => d.uplift),
+        backgroundColor: upliftData.map(d => HIGH_UPLIFT_REGIONS.includes(d.region) ? '#DC267F' : '#648FFF'),
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.8,
+      scales: {
+        x: {
+          grid: { color: '#E0E0E0', lineWidth: 0.5 },
+          border: { display: true, color: '#E0E0E0' },
+          ticks: { callback: v => v + '%', font: { size: 11, family: 'Arial' } },
+          title: { display: true, text: 'Post-Surge Uplift (%)', color: '#595959', font: { size: 11 } },
+        },
+        y: { grid: { display: false }, border: { display: true, color: '#E0E0E0' } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: makeTooltip('region_churn_clean'),
+        annotation: {
+          annotations: {
+            zero: { type: 'line', xMin: 0, xMax: 0, borderColor: '#595959', borderWidth: 1 },
+          }
+        }
+      },
+    },
+    plugins: [{
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const val = upliftData[i].uplift;
+          ctx.save();
+          ctx.fillStyle = '#1B3A5C';
+          ctx.font = 'bold 11px Arial';
+          ctx.textBaseline = 'middle';
+          ctx.textAlign = val >= 0 ? 'left' : 'right';
+          const x = val >= 0 ? bar.x + 6 : bar.x - 6;
+          ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(1) + '%', x, bar.y);
+          if (upliftData[i].region === 'Northern Ireland') {
+            ctx.font = 'italic 10px Arial';
+            ctx.fillStyle = '#595959';
+            ctx.fillText(' \u2013 highest confirmed', x + 55, bar.y);
+          }
+          ctx.restore();
+        });
+      }
+    }]
+  });
+
+  // Five high-uplift region time series
+  destroyChart('region-ts');
+  const allDates = [...new Set(DATA.region_churn_clean.map(d => d.CM_snapshot_date))].sort();
+  const filteredRegions = regionFilter === 'All' ? HIGH_UPLIFT_REGIONS : [regionFilter];
+  const showRegions = filteredRegions.filter(r => HIGH_UPLIFT_REGIONS.includes(r));
+
+  // Compute national Nurse member benchmark from monthly_churn_trends
+  const nationalNurse = DATA.monthly_churn_trends.filter(d => d.segment === 'Nurse member (National)' && d.split === 'train');
+  const nationalMap = {};
+  nationalNurse.forEach(d => nationalMap[d.snapshot_date] = d.computed_churn_rate);
+
+  const regionDatasets = (showRegions.length > 0 ? showRegions : HIGH_UPLIFT_REGIONS).map(region => {
+    const rd = DATA.region_churn_clean.filter(d => d.Region === region);
+    const dataMap = {};
+    rd.forEach(d => {
+      // Compute rate per snapshot
+      dataMap[d.CM_snapshot_date] = d.churn_rate;
+    });
+    return {
+      label: region,
+      data: allDates.map(dt => dataMap[dt] ?? null),
+      borderColor: REGION_LINE_COLOURS[region] || '#999999',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.1,
+    };
+  });
+
+  // Add national benchmark line
+  regionDatasets.push({
+    label: 'National Nurse member',
+    data: allDates.map(dt => nationalMap[dt] ?? null),
+    borderColor: '#595959',
+    borderDash: [5, 5],
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    pointRadius: 0,
+    tension: 0.1,
+  });
+
+  charts['region-ts'] = new Chart(document.getElementById('chart-region-ts'), {
+    type: 'line',
+    data: { labels: allDates, datasets: regionDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      scales: { x: timeXScale(), y: pctYScale('Churn Rate') },
+      plugins: {
+        tooltip: makeTooltip('region_churn_clean'),
+        legend: { position: 'bottom', labels: { font: { size: 12, family: 'Arial' }, usePointStyle: true } },
+        annotation: { annotations: { surge: surgeAnnotation() } },
+      },
+    }
+  });
+
+  // North-South bar chart (static)
+  destroyChart('north-south');
+  charts['north-south'] = new Chart(document.getElementById('chart-north-south'), {
+    type: 'bar',
+    data: {
+      labels: ['North', 'South'],
+      datasets: [{
+        data: [0.00552, 0.00486],
+        backgroundColor: ['#FE6100', '#648FFF'],
+        borderWidth: 0,
+        barPercentage: 0.3,
+        categoryPercentage: 0.5,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.4,
+      scales: {
+        x: { grid: { display: false }, border: { display: true, color: '#E0E0E0' } },
+        y: pctYScale('Mean Monthly Churn Rate'),
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: makeTooltip('region_churn_clean'),
+      },
+    },
+    plugins: [{
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const val = chart.data.datasets[0].data[i];
+          ctx.save();
+          ctx.fillStyle = '#1B3A5C';
+          ctx.font = 'bold 12px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText((val * 100).toFixed(3) + '%', bar.x, bar.y - 8);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ===== PAGE 3: REVENUE AT RISK =====
+let currentFeeSensitivity = 1.0;
+
+function setFeeSensitivity(mult) {
+  currentFeeSensitivity = mult;
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(mult === 1.0 ? 'fee-1' : mult === 1.25 ? 'fee-125' : 'fee-15').classList.add('active');
+  renderPage3();
+}
+
+function renderPage3() {
+  // Revenue bar chart - filtered by sensitivity (single multiplier only)
+  destroyChart('revenue-bar');
+  const revData = DATA.revenue_at_risk;
+  const categories = ['Nurse member', 'Nurse Support Worker', 'Student'];
+  const mult = currentFeeSensitivity;
+  const opacityMap = { 1.0: 0.7, 1.25: 0.85, 1.5: 1.0 };
+  const opacity = opacityMap[mult];
+
+  const barValues = categories.map(cat => {
+    const row = revData.find(d => d.MemCategory === cat && d.sensitivity_multiplier === mult);
+    return row ? row.revenue_at_risk : 0;
+  });
+
+  const datasets = [{
+    label: mult + 'x',
+    data: barValues,
+    backgroundColor: categories.map(cat => hexToRGBA(CATEGORY_COLOUR_MAP[cat], opacity)),
+    borderWidth: 0,
+  }];
+
+  charts['revenue-bar'] = new Chart(document.getElementById('chart-revenue-bar'), {
+    type: 'bar',
+    data: { labels: categories, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      scales: {
+        x: { grid: { display: false }, border: { display: true, color: '#E0E0E0' } },
+        y: {
+          grid: { color: '#E0E0E0', lineWidth: 0.5 },
+          border: { display: true, color: '#E0E0E0' },
+          ticks: { callback: v => '\u00A3' + (v / 1000).toFixed(0) + 'k', font: { size: 11, family: 'Arial' } },
+          title: { display: true, text: 'Estimated Annual Revenue at Risk (\u00A3)', color: '#595959', font: { size: 11 } },
+        },
+      },
+      plugins: {
+        tooltip: {
+          ...makeTooltip('revenue_at_risk'),
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': \u00A3' + ctx.parsed.y.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+            },
+            afterBody: function() { return 'Source: revenue_at_risk'; },
+          }
+        },
+        legend: { display: false },
+      },
+    },
+    plugins: [{
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const val = barValues[i];
+          if (bar && val > 0) {
+            ctx.save();
+            ctx.textAlign = 'center';
+            // If bar top is near canvas top, draw labels inside bar; otherwise above
+            const insideBar = bar.y < 30;
+            if (insideBar) {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.font = 'bold 11px Arial';
+              ctx.fillText('\u00A3' + Math.round(val).toLocaleString(), bar.x, bar.y + 14);
+              ctx.font = 'italic 10px Arial';
+              ctx.fillText(mult + 'x fee', bar.x, bar.y + 28);
+            } else {
+              ctx.fillStyle = '#1B3A5C';
+              ctx.font = 'bold 11px Arial';
+              ctx.fillText('\u00A3' + Math.round(val).toLocaleString(), bar.x, bar.y - 18);
+              ctx.font = 'italic 10px Arial';
+              ctx.fillStyle = '#595959';
+              ctx.fillText(mult + 'x fee', bar.x, bar.y - 4);
+            }
+            ctx.restore();
+          }
+        });
+      }
+    }]
+  });
+
+  // Nurse Revenue Journey chart - Gross Potential vs Attrition-Adjusted Capture
+  destroyChart('journey');
+
+  // Compute average membership volume per category from risk_segmentation
+  const volByCat = {};
+  DATA.risk_segmentation.forEach(r => {
+    if (!volByCat[r.MemCategory]) volByCat[r.MemCategory] = 0;
+    volByCat[r.MemCategory] += r.avg_monthly_members;
+  });
+  const studentVol = volByCat['Student'] || 0;
+  const nurseVol = volByCat['Nurse member'] || 0;
+
+  // Fee constants
+  const STUDENT_FEE = 10.08;
+  const YEAR1_NURSE_FEE = 51.00;
+  const FULL_NURSE_FEE = 102.36;
+
+  // Gross potential revenue at each stage
+  const grossStudent = studentVol * STUDENT_FEE;
+  const grossYear1 = nurseVol * YEAR1_NURSE_FEE;
+  const grossFull = nurseVol * FULL_NURSE_FEE;
+
+  // Attrition-adjusted using annual survival = (1 - monthly_churn)^12
+  const studentSurvival = Math.pow(1 - 0.018, 12);   // 1.80% Student monthly
+  const nurseSurvival = Math.pow(1 - 0.0051, 12);    // 0.51% Nurse monthly
+  const adjStudent = grossStudent * studentSurvival;
+  const adjYear1 = grossYear1 * nurseSurvival;
+  const adjFull = grossFull * nurseSurvival;
+
+  const journeyLabels = ['Student (\u00A310.08/yr)', 'Year 1 Nurse (\u00A351/yr)', 'Full Nurse Member (\u00A3102.36/yr)'];
+  const grossValues = [grossStudent, grossYear1, grossFull];
+  const adjValues = [adjStudent, adjYear1, adjFull];
+
+  charts['journey'] = new Chart(document.getElementById('chart-journey'), {
+    type: 'bar',
+    data: {
+      labels: journeyLabels,
+      datasets: [
+        {
+          label: 'Gross Potential',
+          data: grossValues,
+          backgroundColor: [
+            hexToRGBA('#DC267F', 0.35),
+            hexToRGBA('#648FFF', 0.35),
+            hexToRGBA('#648FFF', 0.35),
+          ],
+          borderColor: ['#DC267F', '#648FFF', '#648FFF'],
+          borderWidth: 1,
+        },
+        {
+          label: 'Attrition-Adjusted Capture',
+          data: adjValues,
+          backgroundColor: ['#DC267F', hexToRGBA('#648FFF', 0.7), '#648FFF'],
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.2,
+      layout: { padding: { right: 150 } },
+      scales: {
+        x: {
+          grid: { color: '#E0E0E0', lineWidth: 0.5 },
+          border: { display: true, color: '#E0E0E0' },
+          stacked: false,
+          ticks: {
+            callback: v => '\u00A3' + (v >= 1e6 ? (v / 1e6).toFixed(1) + 'm' : (v / 1000).toFixed(0) + 'k'),
+            font: { size: 11, family: 'Arial' },
+          },
+          title: { display: true, text: 'Estimated Annual Revenue (\u00A3)', color: '#595959', font: { size: 11 } },
+        },
+        y: { grid: { display: false }, border: { display: true, color: '#E0E0E0' }, stacked: false },
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { size: 12, family: 'Arial' },
+            boxWidth: 14,
+            boxHeight: 14,
+            generateLabels: function(chart) {
+              return [
+                {
+                  text: 'Gross Potential (volume \u00D7 fee)',
+                  fillStyle: hexToRGBA('#595959', 0.25),
+                  strokeStyle: '#595959',
+                  lineWidth: 1,
+                  hidden: false,
+                },
+                {
+                  text: 'Attrition-Adjusted Capture (after churn)',
+                  fillStyle: '#595959',
+                  strokeStyle: '#595959',
+                  lineWidth: 0,
+                  hidden: false,
+                },
+              ];
+            },
+          },
+          onClick: function() {},
+        },
+        tooltip: {
+          ...makeTooltip('risk_segmentation'),
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': \u00A3' + Math.round(ctx.parsed.x).toLocaleString('en-GB');
+            },
+            afterBody: function() { return 'Source: risk_segmentation + confirmed fees'; },
+          }
+        },
+      },
+    },
+    plugins: [{
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const grossMeta = chart.getDatasetMeta(0);
+        const adjMeta = chart.getDatasetMeta(1);
+        for (let i = 0; i < 3; i++) {
+          const grossBar = grossMeta.data[i];
+          const adjBar = adjMeta.data[i];
+          const lost = grossValues[i] - adjValues[i];
+          ctx.save();
+          ctx.textBaseline = 'middle';
+          // Gross label at end of outline bar
+          ctx.fillStyle = '#1B3A5C';
+          ctx.font = 'bold 11px Arial';
+          ctx.fillText(
+            'Gross \u00A3' + Math.round(grossValues[i]).toLocaleString(),
+            grossBar.x + 6,
+            grossBar.y - 6
+          );
+          // Adjusted label at end of filled bar
+          ctx.fillStyle = '#1B3A5C';
+          ctx.font = 'bold 11px Arial';
+          ctx.fillText(
+            'Captured \u00A3' + Math.round(adjValues[i]).toLocaleString(),
+            adjBar.x + 6,
+            adjBar.y + 6
+          );
+          // Lost-to-churn callout
+          ctx.fillStyle = '#D32F2F';
+          ctx.font = 'italic 10px Arial';
+          ctx.fillText(
+            'Lost to churn: \u00A3' + Math.round(lost).toLocaleString(),
+            grossBar.x + 6,
+            grossBar.y + 16
+          );
+          ctx.restore();
+        }
+      }
+    }]
+  });
+
+  // Top 10 segments by revenue at risk
+  destroyChart('top10');
+  const detail = DATA.revenue_at_risk_detail
+    .sort((a, b) => b.impact_score - a.impact_score)
+    .slice(0, 10);
+
+  charts['top10'] = new Chart(document.getElementById('chart-top10'), {
+    type: 'bar',
+    data: {
+      labels: detail.map(d => d.MemCategory + ' \u2013 ' + d.Region + ' \u2013 ' + d.age_band),
+      datasets: [{
+        data: detail.map(d => d.revenue_at_risk),
+        backgroundColor: detail.map(d => RISK_COLOUR_MAP[d.risk_tier] || '#999999'),
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.8,
+      scales: {
+        x: {
+          grid: { color: '#E0E0E0', lineWidth: 0.5 },
+          border: { display: true, color: '#E0E0E0' },
+          ticks: { callback: v => '\u00A3' + (v / 1000).toFixed(0) + 'k', font: { size: 11, family: 'Arial' } },
+        },
+        y: { grid: { display: false }, border: { display: true, color: '#E0E0E0' }, ticks: { font: { size: 10, family: 'Arial' } } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...makeTooltip('risk_segmentation'),
+          callbacks: {
+            label: function(ctx) { return 'Revenue at risk: \u00A3' + ctx.parsed.x.toLocaleString('en-GB', { maximumFractionDigits: 0 }); },
+            afterBody: function() { return 'Source: risk_segmentation'; },
+          }
+        },
+      },
+    },
+    plugins: [{
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const val = detail[i].revenue_at_risk;
+          ctx.save();
+          ctx.fillStyle = '#1B3A5C';
+          ctx.font = '10px Arial';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('\u00A3' + Math.round(val).toLocaleString(), bar.x + 4, bar.y);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ===== PAGE 4: FORECAST =====
+function initPage4Filters() {
+  const segments = [...new Set(DATA.forecast_outputs.map(d => d.segment))].sort();
+  const sel = document.getElementById('filter-segment');
+  segments.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    sel.appendChild(opt);
+  });
+}
+
+function renderPage4() {
+  const highlightSeg = document.getElementById('filter-segment').value;
+
+  // Forecast overview - 3 national categories
+  destroyChart('forecast-overview');
+
+  const nationalSegs = ['Nurse member (National)', 'Nurse Support Worker (National)', 'Student (National)'];
+  const histData = DATA.monthly_churn_trends.filter(d => d.split === 'train' && nationalSegs.includes(d.segment));
+  const fcData = DATA.forecast_outputs.filter(d => nationalSegs.includes(d.segment));
+
+  // All dates combined
+  const histDates = [...new Set(histData.map(d => d.snapshot_date))].sort();
+  const fcDates = [...new Set(fcData.map(d => d.snapshot_date))].sort();
+  const allDates = [...histDates, ...fcDates.filter(d => !histDates.includes(d))].sort();
+
+  const datasets = [];
+  nationalSegs.forEach(seg => {
+    const colour = CATEGORY_COLOUR_MAP[seg];
+    const shortName = seg.replace(' (National)', '');
+    const isHighlighted = highlightSeg === 'All' || highlightSeg === seg;
+    const alpha = isHighlighted ? 1 : 0.3;
+
+    // Historical line
+    const hMap = {};
+    histData.filter(d => d.segment === seg).forEach(d => hMap[d.snapshot_date] = d.computed_churn_rate);
+    datasets.push({
+      label: shortName + ' (Historical)',
+      data: allDates.map(dt => hMap[dt] ?? null),
+      borderColor: hexToRGBA(colour, alpha),
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.1,
+      spanGaps: false,
+    });
+
+    // Forecast line
+    const fMap = {};
+    const fLower = {}, fUpper = {};
+    fcData.filter(d => d.segment === seg).forEach(d => {
+      fMap[d.snapshot_date] = d.churn_rate;
+      fLower[d.snapshot_date] = d.yhat_lower;
+      fUpper[d.snapshot_date] = d.yhat_upper;
+    });
+
+    // Connect forecast to last historical point
+    const lastHistDate = histDates[histDates.length - 1];
+    const lastHistVal = hMap[lastHistDate];
+
+    datasets.push({
+      label: shortName + ' (Forecast)',
+      data: allDates.map(dt => {
+        if (dt === lastHistDate) return lastHistVal;
+        return fMap[dt] ?? null;
+      }),
+      borderColor: hexToRGBA(colour, alpha),
+      borderDash: [5, 5],
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.1,
+      spanGaps: false,
+    });
+
+    // CI shading
+    datasets.push({
+      label: shortName + ' CI',
+      data: allDates.map(dt => fUpper[dt] ?? null),
+      borderColor: 'transparent',
+      backgroundColor: 'transparent',
+      pointRadius: 0,
+      fill: '+1',
+    });
+    datasets.push({
+      label: '_' + shortName + ' CI lower',
+      data: allDates.map(dt => fLower[dt] ?? null),
+      borderColor: 'transparent',
+      backgroundColor: hexToRGBA(colour, 0.15 * alpha),
+      pointRadius: 0,
+      fill: false,
+    });
+  });
+
+  charts['forecast-overview'] = new Chart(document.getElementById('chart-forecast-overview'), {
+    type: 'line',
+    data: { labels: allDates, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      scales: { x: timeXScale(), y: pctYScale('Churn Rate') },
+      plugins: {
+        tooltip: makeTooltip('forecast_outputs'),
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { size: 12, family: 'Arial' },
+            usePointStyle: true,
+            filter: item => !item.text.startsWith('_') && !item.text.includes('CI'),
+          },
+        },
+        annotation: { annotations: { surge: surgeAnnotation(), fcLine: forecastLine() } },
+        filler: { propagate: true },
+      },
+    }
+  });
+
+  // Regional small multiples
+  const regionSmallMultiples = [
+    { id: 'fc-ni', region: 'Northern Ireland', segment: 'Nurse member (Northern Ireland)', histSeg: 'Nurse member (Northern Ireland)' },
+    { id: 'fc-yorks', region: 'Yorkshire & The Humber', segment: 'Nurse member (Yorkshire & The Humber)', histSeg: 'Nurse member (Yorkshire & The Humber)' },
+    { id: 'fc-wales', region: 'Wales', segment: 'Nurse member (Wales)', histSeg: 'Nurse member (Wales)' },
+    { id: 'fc-nw', region: 'North West', segment: 'Nurse member (North West)', histSeg: 'Nurse member (North West)' },
+    { id: 'fc-london', region: 'London', segment: 'Nurse member (London)', histSeg: 'Nurse member (London)' },
+  ];
+
+  regionSmallMultiples.forEach(sm => {
+    destroyChart(sm.id);
+
+    const hist = DATA.monthly_churn_trends.filter(d => d.segment === sm.histSeg && d.split === 'train');
+    const fc = DATA.forecast_outputs.filter(d => d.segment === sm.segment);
+
+    const hDates = hist.map(d => d.snapshot_date).sort();
+    const fDates = fc.map(d => d.snapshot_date).sort();
+    const dates = [...hDates, ...fDates.filter(d => !hDates.includes(d))].sort();
+
+    const hMap = {}, fMap = {}, fL = {}, fU = {};
+    hist.forEach(d => hMap[d.snapshot_date] = d.computed_churn_rate);
+    fc.forEach(d => {
+      fMap[d.snapshot_date] = d.churn_rate;
+      fL[d.snapshot_date] = d.yhat_lower;
+      fU[d.snapshot_date] = d.yhat_upper;
+    });
+
+    const lastHistDate = hDates[hDates.length - 1];
+    const lastHistVal = hMap[lastHistDate];
+
+    const smDatasets = [
+      {
+        label: 'Historical',
+        data: dates.map(dt => hMap[dt] ?? null),
+        borderColor: COLOURS.nurse,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.1,
+      },
+      {
+        label: 'Forecast',
+        data: dates.map(dt => {
+          if (dt === lastHistDate) return lastHistVal;
+          return fMap[dt] ?? null;
+        }),
+        borderColor: COLOURS.nurse,
+        borderDash: [5, 5],
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.1,
+      },
+      {
+        label: 'CI Upper',
+        data: dates.map(dt => fU[dt] ?? null),
+        borderColor: 'transparent',
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+        fill: '+1',
+      },
+      {
+        label: '_CI Lower',
+        data: dates.map(dt => fL[dt] ?? null),
+        borderColor: 'transparent',
+        backgroundColor: hexToRGBA(COLOURS.nurse, 0.15),
+        pointRadius: 0,
+        fill: false,
+      },
+    ];
+
+    charts[sm.id] = new Chart(document.getElementById('chart-' + sm.id), {
+      type: 'line',
+      data: { labels: dates, datasets: smDatasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 1.8,
+        scales: { x: timeXScale(), y: pctYScale() },
+        plugins: {
+          tooltip: makeTooltip('forecast_outputs'),
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: { size: 10, family: 'Arial' },
+              usePointStyle: true,
+              filter: item => !item.text.startsWith('_') && !item.text.includes('CI'),
+            },
+          },
+          annotation: { annotations: { surge: surgeAnnotation(), fcLine: forecastLine() } },
+          filler: { propagate: true },
+        },
+      }
+    });
+  });
+
+  // Forecast method table
+  const tableBody = document.getElementById('forecast-method-table');
+  tableBody.innerHTML = '';
+  const segments = [...new Set(DATA.forecast_outputs.map(d => d.segment))].sort();
+  segments.forEach(seg => {
+    const method = DATA.forecast_outputs.find(d => d.segment === seg)?.method || 'Prophet';
+    const tr = document.createElement('tr');
+    const methodColour = method === 'SARIMAX' ? '#FE6100' : '#1B3A5C';
+    tr.innerHTML = `<td>${seg}</td><td style="color: ${methodColour}; font-weight: bold;">${method}</td><td>${method === 'SARIMAX' ? 'Selected based on lower validation RMSE' : ''}</td>`;
+    tableBody.appendChild(tr);
+  });
+}
+
+// ===== UTILITY =====
+function hexToRGBA(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  initPage2Filters();
+  initPage4Filters();
+
+  // Check hash
+  const hash = window.location.hash.slice(1);
+  if (hash && pageMap[hash]) {
+    showPage(hash);
+  } else {
+    renderPage1();
+  }
+});
+</script>
+</body>
+</html>
