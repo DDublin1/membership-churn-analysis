@@ -67,14 +67,14 @@ The `agent/` module provides a multi-agent system for automated churn insight ge
 ### Running the Agent
 
 ```bash
-# Configure your OpenAI API key
-export OPENAI_API_KEY="your-api-key"
+# Configure your Anthropic API key
+export ANTHROPIC_API_KEY="your-api-key"
 
 # Run the churn analysis agent
 python run_agent.py
 ```
 
-The agent uses FAISS vector search (`vector_store/build_index.py`) to retrieve relevant analytical context from completed notebooks before generating insights via OpenAI's API.
+The agent uses FAISS vector search (`vector_store/build_index.py`) to retrieve relevant analytical context from completed notebooks before generating insights via the Claude API (Anthropic).
 
 ## Dashboard
 
@@ -93,7 +93,7 @@ An interactive HTML dashboard (`dashboard/index.html`) provides stakeholder-faci
 - **Machine Learning**: scikit-learn, XGBoost
 - **Explainability**: SHAP (SHapley Additive exPlanations)
 - **Vector Search**: FAISS (Facebook AI Similarity Search)
-- **LLM Integration**: OpenAI API, python-dotenv
+- **LLM Integration**: Claude API (Anthropic), python-dotenv
 - **Visualization**: Matplotlib, Seaborn
 - **Notebooks**: Jupyter
 
@@ -103,7 +103,7 @@ An interactive HTML dashboard (`dashboard/index.html`) provides stakeholder-faci
 
 - Python 3.8+
 - Java (for Spark)
-- OpenAI API key (for agent system)
+- Anthropic API key (for agent system)
 
 ### Installation
 
@@ -129,7 +129,7 @@ An interactive HTML dashboard (`dashboard/index.html`) provides stakeholder-faci
    - Ensure at least 2.1GB disk space and sufficient RAM for Spark processing
 
 5. **Configure agent (optional)**
-   - Copy `.env.example` to `.env` and add your OpenAI API key
+   - Copy `.env.example` to `.env` and add your Anthropic API key
    - Customize `config.py` for your environment
 
 ### Running Notebooks
@@ -187,4 +187,4 @@ For questions or contributions, please open an issue or contact the repository m
 
 ---
 
-**Built with**: PySpark · scikit-learn · SHAP · OpenAI · FAISS
+**Built with**: PySpark · scikit-learn · SHAP · Claude API (Anthropic) · FAISS
